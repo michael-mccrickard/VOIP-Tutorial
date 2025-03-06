@@ -7,3 +7,12 @@ script = ExtResource("1_udres")
 
 [node name="Input" type="AudioStreamPlayer" parent="."]
 bus = &"Record"
+
+[node name="ButtonTalk" type="Button" parent="."]
+offset_left = 357.0
+offset_top = 111.0
+offset_right = 684.0
+offset_bottom = 204.0
+text = "TALK"
+
+[connection signal="pressed" from="ButtonTalk" to="." method="_on_button_talk_pressed"]

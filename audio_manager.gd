@@ -7,32 +7,45 @@ var playback : AudioStreamGeneratorPlayback
 @export var outputPath : NodePath
 var inputThreshold = 0.005
 var receiveBuffer := PackedFloat32Array()
+
+
+var micOn = false
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	pass # Replace with function body.
+	
 
 func setupAudio(id):
 	input = $Input
 	set_multiplayer_authority(id)
 	if is_multiplayer_authority():
+		print("setting up audio")
 		input.stream = AudioStreamMicrophone.new()
 		input.play()
 		index = AudioServer.get_bus_index("Record")
 		effect = AudioServer.get_bus_effect(index, 0)
 
 	playback = get_node(outputPath).get_stream_playback()
+	print("playback is " + str(playback))
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
 	if is_multiplayer_authority():
-		processMic()
-	processVoice()
-	pass
+		print("mpa " + str(multiplayer.get_unique_id()))
+		print(str(micOn)  + str(multiplayer.get_unique_id()))
+		if (micOn == true):
+			
+			processMic()
+		processVoice()
+	
 
 func processMic():
 	var sterioData : PackedVector2Array = effect.get_buffer(effect.get_frames_available())
 	
 	if sterioData.size() > 0:
+		
+		print(str(sterioData.size()))
 		
 		var data = PackedFloat32Array()
 		data.resize(sterioData.size())
@@ -44,7 +57,7 @@ func processMic():
 			data[i] = value
 		if maxAmplitude < inputThreshold:
 			return
-		#print("sending data from " + str(multiplayer.get_unique_id()))
+		print("sending data from " + str(multiplayer.get_unique_id()))
 		sendData.rpc(data)
 		#sendData(data)
 		
@@ -60,3 +73,29 @@ func processVoice():
 @rpc("any_peer", "call_remote", "unreliable_ordered")
 func sendData(data : PackedFloat32Array):
 	receiveBuffer.append_array(data)
+
+
+func doBusMute(which : bool):
+	
+	index = AudioServer.get_bus_index("Record")
+	AudioServer.set_bus_mute(index, which)
+		
+
+func _on_button_talk_pressed() -> void:
+	micOn = !micOn
+	
+	var btn = $ButtonTalk
+	
+	if (micOn):
+		set_button_font_color(btn, Color.GREEN)
+		doBusMute(false)
+	else:
+		set_button_font_color(btn, Color.YELLOW)
+		doBusMute(true)
+		
+	print("mic on at the end of talk buttton pressed = " + str(micOn))
+
+func set_button_font_color(button: Control, color: Color):
+	button.add_theme_color_override("font_color", color)
+	button.add_theme_color_override("font_hover_color", color)
+	button.add_theme_color_override("font_focus_color", color)
