@@ -28,7 +28,7 @@ func peerDisconnected(id):
 	print("peer disconnected! " + str(id))
 
 func _on_connect_to_server_button_down():
-	peer.create_client("204.48.28.159", 8910)
+	peer.create_client("127.0.0.1", 8910)
 	
 	multiplayer.multiplayer_peer = peer
 	

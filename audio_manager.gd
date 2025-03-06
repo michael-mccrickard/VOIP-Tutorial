@@ -44,7 +44,7 @@ func processMic():
 			data[i] = value
 		if maxAmplitude < inputThreshold:
 			return
-		
+		#print("sending data from " + str(multiplayer.get_unique_id()))
 		sendData.rpc(data)
 		#sendData(data)
 		
@@ -52,7 +52,7 @@ func processMic():
 func processVoice():
 	if receiveBuffer.size() <= 0:
 		return
-	
+	print("getting data addressed to " + str(multiplayer.get_unique_id()))
 	for i in range(min(playback.get_frames_available(), receiveBuffer.size())):
 		playback.push_frame(Vector2(receiveBuffer[0], receiveBuffer[0]))
 		receiveBuffer.remove_at(0)
