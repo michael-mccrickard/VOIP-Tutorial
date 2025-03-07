@@ -1,10 +1,13 @@
 extends Node
 
+#var server_ip = "127.0.0.1"
+var server_ip = "192.168.1.153"
+
 var peer = ENetMultiplayerPeer.new()
 @export var playerScene : PackedScene
 var clientConnected : bool
 @export var gameSpawnLocation : NodePath
-# Called when the node enters the scene tree for the first time.
+
 func _ready():
 	multiplayer.peer_connected.connect(peerConnected)
 	multiplayer.peer_disconnected.connect(peerDisconnected)
@@ -29,7 +32,7 @@ func peerDisconnected(id):
 	print("peer disconnected! " + str(id))
 
 func _on_connect_to_server_button_down():
-	peer.create_client("127.0.0.1", 8910)
+	peer.create_client(server_ip, 8910)
 	
 	multiplayer.multiplayer_peer = peer
 	
