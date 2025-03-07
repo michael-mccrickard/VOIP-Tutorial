@@ -23,7 +23,8 @@ func peerConnected(id):
 	get_node(gameSpawnLocation).add_child(p)
 	p.name = str(id)
 	p.get_node("AudioManager").setupAudio(id)
-
+	$"../Status".text = "You are a client connected to the app, id = " + str(multiplayer.get_unique_id())
+	
 func peerDisconnected(id):
 	print("peer disconnected! " + str(id))
 

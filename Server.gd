@@ -38,7 +38,8 @@ func _on_host_button_down():
 	if error:
 		print("we have an error for server: " + error)
 	multiplayer.multiplayer_peer = peer
-	
+	$"../Status".text = "You are hosting the app, id = " + str(multiplayer.get_unique_id())
+
 	var p = playerScene.instantiate()
 	get_node(gameSpawnLocation).add_child(p)
 	p.name = str(1)
