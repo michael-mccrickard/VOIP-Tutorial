@@ -4,6 +4,3 @@
 
 [node name="AudioManager" type="Node"]
 script = ExtResource("1_udres")
-
-[node name="Input" type="AudioStreamPlayer" parent="."]
-bus = &"Record"

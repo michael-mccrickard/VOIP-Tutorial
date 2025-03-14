@@ -39,10 +39,12 @@ func _on_host_button_down():
 		print("we have an error for server: " + error)
 	multiplayer.multiplayer_peer = peer
 	$"../Status".text = "You are hosting the app, id = " + str(multiplayer.get_unique_id())
+	
+	AudioManager.setupAudio(1)
 
-	var p = playerScene.instantiate()
-	get_node(gameSpawnLocation).add_child(p)
-	p.name = str(1)
-	p.get_node("AudioManager").setupAudio(1)
-	serverIsReady = true
-	pass # Replace with function body.
+	#var p = playerScene.instantiate()
+	#get_node(gameSpawnLocation).add_child(p)
+	#p.name = str(1)
+	#p.get_node("AudioManager").setupAudio(1)
+	#serverIsReady = true
+	#pass # Replace with function body.

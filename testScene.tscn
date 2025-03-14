@@ -39,4 +39,4 @@ text = "Status"
 horizontal_alignment = 1
 
 [connection signal="button_down" from="Server/Host" to="Server" method="_on_host_button_down"]
-[connection signal="button_down" from="Client/ConnectToServer" to="Client" method="_on_connect_to_server_button_down"]
+[connection signal="pressed" from="Client/ConnectToServer" to="Client" method="_on_connect_to_server_pressed"]

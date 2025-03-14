@@ -3,12 +3,15 @@ extends Node
 #var server_ip = "127.0.0.1"
 var server_ip = "192.168.1.153"
 
+
 var peer = ENetMultiplayerPeer.new()
 @export var playerScene : PackedScene
-var clientConnected : bool
-@export var gameSpawnLocation : NodePath
+var serverIsReady : bool
 
+@export var gameSpawnLocation : NodePath
+# Called when the node enters the scene tree for the first time.
 func _ready():
+
 	multiplayer.peer_connected.connect(peerConnected)
 	multiplayer.peer_disconnected.connect(peerDisconnected)
 	pass # Replace with function body.
@@ -16,29 +19,34 @@ func _ready():
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
-	if clientConnected:
+	if serverIsReady:
 		peer.poll()
 	pass
+	
 
 func peerConnected(id):
+
 	print("peer connected! " + str(id))
-	var p = playerScene.instantiate()
-	get_node(gameSpawnLocation).add_child(p)
-	p.name = str(id)
-	p.get_node("AudioManager").setupAudio(id)
-	$"../Status".text = "You are a client connected to the app, id = " + str(multiplayer.get_unique_id())
-	
+	#var p = playerScene.instantiate()
+	#add_child(p)
+	#p.name = str(id)
+	#p.get_node("AudioManager").setupAudio(id)
+
 func peerDisconnected(id):
 	print("peer disconnected! " + str(id))
 
-func _on_connect_to_server_button_down():
-	peer.create_client(server_ip, 8910)
-	
+func _on_connect_to_server_pressed():
+	var error = peer.create_client(server_ip, 8910)
+	if error:
+		print("we have an error for client: " + error)
 	multiplayer.multiplayer_peer = peer
+	$"../Status".text = "You are connected to the app, id = " + str(multiplayer.get_unique_id())
 	
-	var p = playerScene.instantiate()
-	get_node(gameSpawnLocation).add_child(p)
-	p.name = str(multiplayer.get_unique_id())
-	p.get_node("AudioManager").setupAudio(multiplayer.get_unique_id())
-	clientConnected = true
-	pass # Replace with function body.
+	AudioManager.setupAudio(multiplayer.get_unique_id())
+
+	#var p = playerScene.instantiate()
+	#get_node(gameSpawnLocation).add_child(p)
+	#p.name = str(1)
+	#p.get_node("AudioManager").setupAudio(1)
+	#serverIsReady = true
+	#pass # Replace with function body.
