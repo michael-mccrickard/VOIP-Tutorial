@@ -32,6 +32,7 @@ func setupAudio(id):
 		
 		output = AudioStreamPlayer2D.new()
 		output.stream = AudioStreamGenerator.new()
+		output.stream.mix_rate = 48000
 		output.bus = "Master"
 		output.autoplay = true
 		add_child(output)
