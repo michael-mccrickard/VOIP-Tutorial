@@ -1,52 +1,74 @@
 extends Node
 
-#@onready var input : AudioStreamPlayer
 var input : AudioStreamPlayer
 var output : AudioStreamPlayer2D
 var index : int
-var effect : AudioEffectCapture
-var playback
+var effect : AudioEffectOpusChunked
+var playback_stream : AudioStreamOpusChunked
 # Identifier for the remote peer we are communicating with.
 var partner_id : int = 0
 # Push-to-talk mode flag.
 var talk_mode := false
 #@export var outputPath : NodePath
-var inputThreshold = 0.005
-var receiveBuffer := PackedFloat32Array()
+var receiveBuffer : Array[PackedByteArray] = []
 var audioIsReady = false
-var mix_rate = 48000
-
-const AUDIO_PACKET_SAMPLES = 128 # 128 samples * 4 bytes = 512 bytes (well below MTU)
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	pass # Replace with function body.
 
 func setupAudio(id):
-	#input = $Input
-	input = AudioStreamPlayer.new()
-	set_multiplayer_authority(id)
-	if is_multiplayer_authority():
-		input.stream = AudioStreamMicrophone.new()
-		input.name = "NewInput"
-		input.bus = "Record"
-		input.autoplay = true
-		input.play()
-		index = AudioServer.get_bus_index("Record")
-		effect = AudioServer.get_bus_effect(index, 0)
-		add_child(input)
+        input = AudioStreamPlayer.new()
+        set_multiplayer_authority(id)
+        if is_multiplayer_authority():
+                input.stream = AudioStreamMicrophone.new()
+                input.name = "NewInput"
+                var microphone_bus_name := "MicrophoneBus"
+                index = AudioServer.get_bus_index(microphone_bus_name)
+                if index == -1:
+                        microphone_bus_name = "Record"
+                        index = AudioServer.get_bus_index(microphone_bus_name)
+                if index != -1:
+                        AudioServer.set_bus_mute(index, true)
+                        input.bus = microphone_bus_name
+                        effect = _get_opus_effect_for_bus(index)
+                        if effect == null:
+                                push_error("AudioEffectOpusChunked not found on bus '%s'." % microphone_bus_name)
+                else:
+                        push_error("Unable to find a microphone bus. Configure 'MicrophoneBus' with an AudioEffectOpusChunked effect.")
+                input.autoplay = true
+                input.play()
+                add_child(input)
 
-		output = AudioStreamPlayer2D.new()
-		output.stream = AudioStreamGenerator.new()
-		output.stream.mix_rate = mix_rate
-		output.bus = "Master"
-		output.autoplay = true
-		add_child(output)
-		output.play()
-		playback = output.get_stream_playback()
+                output = AudioStreamPlayer2D.new()
+                playback_stream = AudioStreamOpusChunked.new()
+                output.stream = playback_stream
+                output.bus = "Master"
+                output.autoplay = true
+                add_child(output)
+                output.play()
 
-	audioIsReady = true
-	print("chilling")
+        audioIsReady = true
+        print("chilling")
+
+func _get_opus_effect_for_bus(bus_index: int) -> AudioEffectOpusChunked:
+        if bus_index == -1:
+                return null
+
+        var effect_count := AudioServer.get_bus_effect_count(bus_index)
+        for i in range(effect_count):
+                var candidate := AudioServer.get_bus_effect(bus_index, i)
+                if candidate is AudioEffectOpusChunked:
+                        return candidate
+
+        for i in range(effect_count - 1, -1, -1):
+                var removable := AudioServer.get_bus_effect(bus_index, i)
+                if removable is AudioEffectCapture:
+                        AudioServer.remove_bus_effect(bus_index, i)
+
+        var opus_effect := AudioEffectOpusChunked.new()
+        AudioServer.add_bus_effect(bus_index, opus_effect, 0)
+        return opus_effect
 
 # Store the id of the remote peer that audio should be sent to.
 func set_partner_id(id: int):
@@ -67,46 +89,33 @@ func is_talk_mode() -> bool:
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
-	if !audioIsReady:
-		return
+        if !audioIsReady:
+                return
 
-	if talk_mode:
-		processMic2()
-	processVoice()
-	pass
+        processMic2()
+        processVoice()
 
 
 func processVoice():
-	if receiveBuffer.size() <= 0:
-		return
-	for i in range(min(playback.get_frames_available(), receiveBuffer.size())):
-		playback.push_frame(Vector2(receiveBuffer[0], receiveBuffer[0]))
-		receiveBuffer.remove_at(0)
+        if playback_stream == null or receiveBuffer.size() <= 0:
+                return
+
+        while playback_stream.chunk_space_available() > 0 and receiveBuffer.size() > 0:
+                var packet : PackedByteArray = receiveBuffer[0]
+                receiveBuffer.remove_at(0)
+                playback_stream.push_opus_packet(packet, 0, 0)
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")
-func sendData(data : PackedFloat32Array):
-	receiveBuffer.append_array(data)
+func sendData(data : PackedByteArray):
+        receiveBuffer.append(data)
 
 func processMic2():
-	var sterioData : PackedVector2Array = effect.get_buffer(effect.get_frames_available())
-	var data = PackedFloat32Array()
-	
-	if sterioData.size() > 0:
-		data.resize(sterioData.size())
-		var maxAmplitude := 0.0
+        if effect == null or !is_multiplayer_authority():
+                return
 
-		for i in range(sterioData.size()):
-			var value = (sterioData[i].x + sterioData[i].y) / 2
-			maxAmplitude = max(value, maxAmplitude)
-			data[i] = value
-
-		if maxAmplitude < inputThreshold:
-			return
-
-		# Chunk to raw PCM floats!
-		var p = 0
-		while p < data.size():
-			var chunk_size = min(AUDIO_PACKET_SAMPLES, data.size() - p)
-			var chunk = data.slice(p, p + chunk_size)
-			sendData.rpc_id(partner_id, chunk)
-			p += chunk_size
+        var prepend := PackedByteArray()
+        while effect.chunk_available():
+                var opusdata : PackedByteArray = effect.read_opus_packet(prepend)
+                effect.drop_chunk()
+                if talk_mode and partner_id != 0 and opusdata.size() > 0:
+                        sendData.rpc_id(partner_id, opusdata)
