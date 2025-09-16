@@ -17,26 +17,6 @@ var audioIsReady = false
 var mix_rate = 48000
 
 const AUDIO_PACKET_SAMPLES = 128 # 128 samples * 4 bytes = 512 bytes (well below MTU)
-const MU = 255.0
-
-# --- μ-law encode/decode functions ---
-# Encode a float [-1, 1] to an 8-bit μ-law value (0-255)
-func mulaw_encode(sample: float) -> int:
-	# Clamp to [-1, 1]
-	sample = clamp(sample, -1.0, 1.0)
-	# μ-law compression
-	var sign := 0 if sample >= 0 else 1
-	var abs_sample = abs(sample)
-	var mu_encoded := log(1 + MU * abs_sample) / log(1 + MU)
-	mu_encoded = int((sign << 7) | int(mu_encoded * 127.0))
-	return mu_encoded
-
-# Decode an 8-bit μ-law value (0-255) to float [-1, 1]
-func mulaw_decode(mu_val: int) -> float:
-	var sign := -1.0 if (mu_val & 0x80) else 1.0
-	mu_val = mu_val & 0x7F
-	var decoded := (1.0 / MU) * ((1 + MU) ** (mu_val / 127.0) - 1)
-	return sign * decoded
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -118,15 +98,12 @@ func processMic():
 		if maxAmplitude < inputThreshold:
 			return
 		#print("sending data from " + str(multiplayer.get_unique_id()))
-		# Instead, use μ-law encoding and chunking:
+		# Just send the raw PCM floats:
 		var p = 0
 		while p < data.size():
 			var chunk_size = min(AUDIO_PACKET_SAMPLES, data.size() - p)
 			var chunk = data.slice(p, p + chunk_size)
-			var mu_chunk = PackedByteArray()
-			for j in range(chunk.size()):
-				mu_chunk.append(mulaw_encode(chunk[j]))
-			sendData.rpc_id(partner_id, mu_chunk)
+			sendData.rpc_id(partner_id, chunk)
 			p += chunk_size
 
 func processVoice():
@@ -137,9 +114,8 @@ func processVoice():
 		receiveBuffer.remove_at(0)
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")
-func sendData(data : PackedByteArray):
-	for i in data:
-		receiveBuffer.append(mulaw_decode(i))
+func sendData(data : PackedFloat32Array):
+	receiveBuffer.append_array(data)
 
 func processMic2():
 	var sterioData : PackedVector2Array = effect.get_buffer(effect.get_frames_available())
@@ -157,13 +133,10 @@ func processMic2():
 		if maxAmplitude < inputThreshold:
 			return
 
-		# Chunk to μ-law!
+		# Chunk to raw PCM floats!
 		var p = 0
 		while p < data.size():
 			var chunk_size = min(AUDIO_PACKET_SAMPLES, data.size() - p)
 			var chunk = data.slice(p, p + chunk_size)
-			var mu_chunk = PackedByteArray()
-			for j in range(chunk.size()):
-				mu_chunk.append(mulaw_encode(chunk[j]))
-			sendData.rpc_id(partner_id, mu_chunk)
+			sendData.rpc_id(partner_id, chunk)
 			p += chunk_size

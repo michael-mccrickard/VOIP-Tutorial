@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dq4oh0m2yug2r" path="res://Server.gd" id="1_lyn0j"]
 [ext_resource type="Script" uid="uid://bejcfb0tass5v" path="res://Client.gd" id="2_j5xaw"]
-[ext_resource type="Script" path="res://TalkButton.gd" id="3_9l7cv"]
+[ext_resource type="Script" uid="uid://csb8jvunhkf1w" path="res://TalkButton.gd" id="3_9l7cv"]
 
 [node name="Node2D" type="Node2D"]
 

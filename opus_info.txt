@@ -1,0 +1,23 @@
+If you are familiar with the Godot Audio system, the following minimal use case of this plugin should make sense:
+
+As outlined in the docs, create an AudioStreamPlayer with stream=AudioStreamMicrophone, set it to Autoplay, and ensure your ProjectSettings have audio/driver/enable_input set to true. Set its bus to a new bus called "MicrophoneBus" which should be Muted to stop it creating a feedback loop to the output. Add an effect OpusChunked to the MicrophoneBus. This will only be an option if the twovoip addon is installed.
+
+Assuming that AudioEffectOpusChunked is the first one on the bus, you can get a reference to it with
+
+var microphoneidx = AudioServer.get_bus_index("MicrophoneBus")
+var opuschunked : AudioEffectOpusChunked = AudioServer.get_bus_effect(microphoneidx, 0)
+Now you can consume and transmit the byte chunks with the following code:
+
+func _process(delta):
+	var prepend = PackedByteArray()
+	while opuschunked.chunk_available():
+		var opusdata : PackedByteArray = opuschunked.read_opus_packet(prepend)
+		opuschunked.drop_chunk()
+		transmit(opusdata)
+At the other end you can decode the opus packets into an AudioStreamPlayer whose stream is set to an AudioStreamOpusChunked.
+
+var audiostreamopuschunked : AudioStreamOpusChunked = $AudioStreamPlayer.stream
+var opuspacketsbuffer = [ ]   # append incoming packets to this list
+func _process(delta):
+	while audiostreamopuschunked.chunk_space_available():
+		audiostreamopuschunked.push_opus_packet(opuspacketsbuffer.pop_front(), 0, 0)
