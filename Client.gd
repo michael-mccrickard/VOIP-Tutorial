@@ -1,7 +1,7 @@
 extends Node
 
 #var server_ip = "127.0.0.1"
-var server_ip = "192.168.1.153"
+var server_ip = "192.168.1.170"
 
 
 var peer = ENetMultiplayerPeer.new()

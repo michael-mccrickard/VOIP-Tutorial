@@ -25,10 +25,6 @@ func _process(delta):
 func peerConnected(id):
 
 	print("peer connected! " + str(id))
-	#var p = playerScene.instantiate()
-	#add_child(p)
-	#p.name = str(id)
-	#p.get_node("AudioManager").setupAudio(id)
 
 func peerDisconnected(id):
 	print("peer disconnected! " + str(id))
@@ -41,10 +37,3 @@ func _on_host_button_down():
 	$"../Status".text = "You are hosting the app, id = " + str(multiplayer.get_unique_id())
 	
 	AudioManager.setupAudio(1)
-
-	#var p = playerScene.instantiate()
-	#get_node(gameSpawnLocation).add_child(p)
-	#p.name = str(1)
-	#p.get_node("AudioManager").setupAudio(1)
-	#serverIsReady = true
-	#pass # Replace with function body.
