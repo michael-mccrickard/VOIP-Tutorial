@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://ca04c1wx0kvdo"]
+[gd_scene load_steps=5 format=3 uid="uid://ca04c1wx0kvdo"]
 
 [ext_resource type="Script" uid="uid://dq4oh0m2yug2r" path="res://Server.gd" id="1_lyn0j"]
 [ext_resource type="Script" uid="uid://bejcfb0tass5v" path="res://Client.gd" id="2_j5xaw"]
 [ext_resource type="PackedScene" uid="uid://dwjn1gvyut2nn" path="res://character.tscn" id="2_o1nn7"]
+[ext_resource type="Script" uid="uid://csb8jvunhkf1w" path="res://TalkButton.gd" id="3_9l7cv"]
 
 [node name="Node2D" type="Node2D"]
 
@@ -37,6 +38,14 @@ offset_right = 1141.0
 offset_bottom = 23.0
 text = "Status"
 horizontal_alignment = 1
+
+[node name="TalkButton" type="Button" parent="."]
+offset_left = 504.0
+offset_top = 50.0
+offset_right = 592.0
+offset_bottom = 95.0
+text = "Talk"
+script = ExtResource("3_9l7cv")
 
 [connection signal="button_down" from="Server/Host" to="Server" method="_on_host_button_down"]
 [connection signal="pressed" from="Client/ConnectToServer" to="Client" method="_on_connect_to_server_pressed"]
