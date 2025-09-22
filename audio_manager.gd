@@ -23,9 +23,14 @@ func _ready():
 
 
 func setupAudio(id):
-	input = AudioStreamPlayer.new()
-	set_multiplayer_authority(id)
-	if is_multiplayer_authority():
+        if OS.has_feature("dedicated_server"):
+                print("Dedicated server detected; skipping audio setup.")
+                audioIsReady = false
+                return
+
+        input = AudioStreamPlayer.new()
+        set_multiplayer_authority(id)
+        if is_multiplayer_authority():
 		input.stream = AudioStreamMicrophone.new()
 		input.name = "NewInput"
 		var microphone_bus_name := "MicrophoneBus"
