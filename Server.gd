@@ -4,8 +4,9 @@ extends Node
 var peer = ENetMultiplayerPeer.new()
 var serverIsReady : bool
 var partner_id : int = 0
-var port_local = 8910
-var port_remote = 4242
+const DEFAULT_PORT := 4242
+var port_local := DEFAULT_PORT
+var port_remote := DEFAULT_PORT
 
 func _ready():
 	if OS.has_feature("dedicated_server"):
