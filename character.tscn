@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://dwjn1gvyut2nn"]
+[gd_scene load_steps=3 format=3 uid="uid://dmwcde8egna03"]
 
 [ext_resource type="PackedScene" uid="uid://ch5nid8w2n1xe" path="res://audio_manager.tscn" id="1_xdr8y"]
 

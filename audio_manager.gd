@@ -20,10 +20,9 @@ var _playback_debug_count := 0
 func _ready():
 	var actual_mix_rate = AudioServer.get_mix_rate()
 	print("Actual audio server mix rate:", actual_mix_rate)
-	pass # Replace with function body.
+
 
 func setupAudio(id):
-
 	input = AudioStreamPlayer.new()
 	set_multiplayer_authority(id)
 	if is_multiplayer_authority():
@@ -38,10 +37,10 @@ func setupAudio(id):
 			AudioServer.set_bus_mute(index, true)
 			input.bus = microphone_bus_name
 			effect = _get_opus_effect_for_bus(index)
-					if effect == null:
-						push_error("AudioEffectOpusChunked not found on bus '%s'." % microphone_bus_name)
-					else:
-						_print_effect_diagnostics(microphone_bus_name)
+			if effect == null:
+				push_error("AudioEffectOpusChunked not found on bus '%s'." % microphone_bus_name)
+			else:
+				_print_effect_diagnostics(microphone_bus_name)
 		else:
 			push_error("Unable to find a microphone bus. Configure 'MicrophoneBus' with an AudioEffectOpusChunked effect.")
 		input.autoplay = true
@@ -61,17 +60,16 @@ func setupAudio(id):
 	print("chilling")
 
 func _print_effect_diagnostics(bus_name: String) -> void:
+	return
 	if effect == null:
 		return
 
 	var audio_mix_rate := AudioServer.get_mix_rate()
 	var effect_mix_rate : Variant = "unknown"
-	if effect.has_method("get_mix_rate"):
-		effect_mix_rate = effect.get_mix_rate()
+	effect_mix_rate = effect.get_mix_rate() if effect.has_method("get_mix_rate") else "unknown"
 
 	var effect_channels : Variant = "unknown"
-	if effect.has_method("get_channels"):
-		effect_channels = effect.get_channels()
+	effect_channels = effect.get_channels() if effect.has_method("get_channels") else "unknown"
 
 	print("Opus capture effect configured on bus '%s'. AudioServer mix rate=%s, effect mix rate=%s, channels=%s" % [bus_name, audio_mix_rate, effect_mix_rate, effect_channels])
 	if effect_mix_rate == "unknown" or effect_channels == "unknown":
@@ -83,8 +81,7 @@ func _configure_playback_stream() -> void:
 
 	var target_mix_rate := AudioServer.get_mix_rate()
 	var before_mix_rate : Variant = "unavailable"
-	if playback_stream.has_method("get_mix_rate"):
-		before_mix_rate = playback_stream.get_mix_rate()
+	before_mix_rate = playback_stream.get_mix_rate() if playback_stream.has_method("get_mix_rate") else "unavailable"
 
 	var property_names := _collect_property_names(playback_stream)
 	if playback_stream.has_method("set_mix_rate"):
@@ -93,10 +90,7 @@ func _configure_playback_stream() -> void:
 		print("AudioStreamOpusChunked is missing set_mix_rate(). Properties:", property_names)
 
 	var after_mix_rate : Variant = before_mix_rate
-	if playback_stream.has_method("get_mix_rate"):
-		after_mix_rate = playback_stream.get_mix_rate()
-	else:
-		after_mix_rate = target_mix_rate
+	after_mix_rate = playback_stream.get_mix_rate() if playback_stream.has_method("get_mix_rate") else target_mix_rate
 
 	print("Configured playback stream mix rate. target=%s, before=%s, after=%s" % [target_mix_rate, before_mix_rate, after_mix_rate])
 	if playback_stream.has_method("get_channels"):
@@ -155,41 +149,41 @@ func _process(delta):
 	processVoice()
 
 func processVoice():
-        if playback_stream == null or receiveBuffer.size() <= 0:
-                return
+	if playback_stream == null or receiveBuffer.size() <= 0:
+		return
 
-        while playback_stream.chunk_space_available() and receiveBuffer.size() > 0:
-                var packet : PackedByteArray = receiveBuffer[0]
-                receiveBuffer.remove_at(0)
-                playback_stream.push_opus_packet(packet, 0, 0)
+	while playback_stream.chunk_space_available() and receiveBuffer.size() > 0:
+		var packet : PackedByteArray = receiveBuffer[0]
+		receiveBuffer.remove_at(0)
+		playback_stream.push_opus_packet(packet, 0, 0)
 
-                if _playback_debug_count < 5:
-                        var playback_mix_rate : Variant = "unknown"
-                        if playback_stream.has_method("get_mix_rate"):
-                                playback_mix_rate = playback_stream.get_mix_rate()
-                        print("Playback chunk #%s pushed: size=%s bytes, queued packets remaining=%s, playback mix rate=%s" % [_playback_debug_count + 1, packet.size(), receiveBuffer.size(), playback_mix_rate])
-                        _playback_debug_count += 1
+		if _playback_debug_count < 5:
+			var playback_mix_rate : Variant = "unknown"
+			playback_mix_rate = playback_stream.get_mix_rate() if playback_stream.has_method("get_mix_rate") else "unknown"
+			print("Playback chunk #%s pushed: size=%s bytes, queued packets remaining=%s, playback mix rate=%s" % [_playback_debug_count + 1, packet.size(), receiveBuffer.size(), playback_mix_rate])
+			_playback_debug_count += 1
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")
 func sendData(data : PackedByteArray):
 	receiveBuffer.append(data)
 
 func processMic():
-	if effect == null or !is_multiplayer_authority():
+	if effect == null: #or !is_multiplayer_authority():
 		return
+		
+	if !talk_mode: return
 
-        var prepend := PackedByteArray()
-        while effect.chunk_available():
-                var opusdata : PackedByteArray = effect.read_opus_packet(prepend)
-                effect.drop_chunk()
-                var should_send := talk_mode and partner_id != 0 and opusdata.size() > 0
+	var prepend := PackedByteArray()
+	while effect.chunk_available():
+		var opusdata : PackedByteArray = effect.read_opus_packet(prepend)
+		effect.drop_chunk()
+		var should_send := talk_mode and partner_id != 0 and opusdata.size() > 0
 
-                if _mic_debug_count < 5:
-                        var effect_mix_rate : Variant = "unknown"
-                        if effect.has_method("get_mix_rate"):
-                                effect_mix_rate = effect.get_mix_rate()
-                        print("Mic chunk #%s: size=%s bytes, should_send=%s, talk_mode=%s, partner_id=%s, effect mix rate=%s" % [_mic_debug_count + 1, opusdata.size(), should_send, talk_mode, partner_id, effect_mix_rate])
-                        _mic_debug_count += 1
+		if _mic_debug_count < 5:
+			var effect_mix_rate : Variant = "unknown"
+			effect_mix_rate = effect.get_mix_rate() if effect.has_method("get_mix_rate") else "unknown"
+			print("Mic chunk #%s: size=%s bytes, should_send=%s, talk_mode=%s, partner_id=%s, effect mix rate=%s" % [_mic_debug_count + 1, opusdata.size(), should_send, talk_mode, partner_id, effect_mix_rate])
+			_mic_debug_count += 1
 
-                if should_send:
-                        sendData.rpc_id(partner_id, opusdata)
+		if should_send:
+			sendData.rpc_id(partner_id, opusdata)
