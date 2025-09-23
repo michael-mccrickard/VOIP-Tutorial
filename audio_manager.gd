@@ -21,16 +21,15 @@ func _ready():
 	var actual_mix_rate = AudioServer.get_mix_rate()
 	print("Actual audio server mix rate:", actual_mix_rate)
 
-
 func setupAudio(id):
-        if OS.has_feature("dedicated_server"):
-                print("Dedicated server detected; skipping audio setup.")
-                audioIsReady = false
-                return
-
-        input = AudioStreamPlayer.new()
-        set_multiplayer_authority(id)
-        if is_multiplayer_authority():
+	if OS.has_feature("dedicated_server"):
+		print("Dedicated server detected; skipping audio setup.")
+		audioIsReady = false
+		return
+	
+	input = AudioStreamPlayer.new()
+	set_multiplayer_authority(id)
+	if is_multiplayer_authority():
 		input.stream = AudioStreamMicrophone.new()
 		input.name = "NewInput"
 		var microphone_bus_name := "MicrophoneBus"
@@ -60,7 +59,7 @@ func setupAudio(id):
 		output.autoplay = true
 		add_child(output)
 		output.play()
-
+	
 	audioIsReady = true
 	print("chilling")
 
@@ -148,7 +147,7 @@ func is_talk_mode() -> bool:
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
-	if !audioIsReady:
+	if !audioIsReady or OS.has_feature("dedicated_server"):
 		return
 	processMic()
 	processVoice()
@@ -173,10 +172,11 @@ func sendData(data : PackedByteArray):
 	receiveBuffer.append(data)
 
 func processMic():
-	if effect == null: #or !is_multiplayer_authority():
+	if effect == null:
 		return
-		
-	if !talk_mode: return
+
+	if !talk_mode:
+		return
 
 	var prepend := PackedByteArray()
 	while effect.chunk_available():

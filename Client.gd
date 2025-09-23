@@ -2,7 +2,7 @@ extends Node
 # Client.gd
 
 var server_ip_local = "192.168.1.170"
-var server_ip_remote = "157.245.120.11"  # Your Digital Ocean IP
+var server_ip_remote = "167.71.186.32"  # Your Digital Ocean IP
 var server_port = 4242  # Use the same port for both local and remote for consistency
 
 var peer = ENetMultiplayerPeer.new()
